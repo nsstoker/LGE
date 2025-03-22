@@ -52,14 +52,14 @@
                 return;
             }
 
-            let message = `I am on my way and should be there ${timeRange}. -LG Direct Service Technician`;
+            let message = timeRange ? `I am on my way and should be there ${timeRange}. -LG Direct Service Technician` : '';
 
             // Encode phone number and message for URL safety
             tel = encodeURIComponent(tel);
             message = encodeURIComponent(message);
 
             // Open SMS app with formatted message
-            window.location = `sms:+${tel}?&body=${message}`;
+            window.location = message ? `sms:+${tel}?&body=${message}` : `sms:+${tel}`;
 
             // Delay before closing to ensure SMS app opens
             setTimeout(() => {
@@ -77,5 +77,6 @@
     <button class="btn" onclick="sendSMS('in about 30-45 minutes')">30-45 minutes</button>
     <button class="btn" onclick="sendSMS('in about 45-60 minutes')">45-60 minutes</button>
     <button class="btn" onclick="sendSMS('shortly')">Shortly</button>
+    <button class="btn" onclick="sendSMS('')">Open Messenger without Text</button>
 </body>
 </html>
