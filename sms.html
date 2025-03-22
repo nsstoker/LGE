@@ -61,9 +61,15 @@
             // Open SMS app with formatted message
             window.location = message ? `sms:+${tel}?&body=${message}` : `sms:+${tel}`;
 
-            // Delay before closing to ensure SMS app opens
+            // Attempt to minimize or hide the browser window
             setTimeout(() => {
-                window.close();
+                if (window.AndroidInterface && window.AndroidInterface.closeWindow) {
+                    window.AndroidInterface.closeWindow();
+                } else {
+                    window.blur();
+                    window.open('', '_self', '');
+                    window.close();
+                }
             }, 500);
         }
     </script>
