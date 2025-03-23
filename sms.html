@@ -54,12 +54,10 @@
 
             let message = timeRange ? `I am on my way and should be there ${timeRange}. -LG Direct Service Technician` : '';
 
-            // Use intent URL for better compatibility
-            if (message) {
-                window.location.href = `intent://+${tel}#Intent;scheme=smsto;package=com.google.android.apps.messaging;S.android.intent.extra.TEXT=${encodeURIComponent(message)};end`;
-            } else {
-                window.location.href = `intent://+${tel}#Intent;scheme=smsto;package=com.google.android.apps.messaging;end`;
-            }
+            // Construct SMS URI
+            let smsUri = message ? `sms:${tel}?body=${encodeURIComponent(message)}` : `sms:${tel}`;
+
+            window.location.href = smsUri;
 
             // Attempt to minimize or hide the browser window
             setTimeout(() => {
