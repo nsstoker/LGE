@@ -56,9 +56,9 @@
 
             // Use intent URL for better compatibility
             if (message) {
-                window.location.href = `intent://send/${tel}#Intent;scheme=smsto;package=com.google.android.apps.messaging;S.android.intent.extra.TEXT=${encodeURIComponent(message)};end`;
+                window.location.href = `intent://+${tel}#Intent;scheme=smsto;package=com.google.android.apps.messaging;S.android.intent.extra.TEXT=${encodeURIComponent(message)};end`;
             } else {
-                window.location.href = `intent://send/${tel}#Intent;scheme=smsto;package=com.google.android.apps.messaging;end`;
+                window.location.href = `intent://+${tel}#Intent;scheme=smsto;package=com.google.android.apps.messaging;end`;
             }
 
             // Attempt to minimize or hide the browser window
