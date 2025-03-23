@@ -1,86 +1,29 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Messenger ETA Selector</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
+function sendSMS(timeRange) {
+    const urlParams = new URLSearchParams(window.location.search);
+    let tel = urlParams.get("tel");
+
+    if (!tel) {
+        alert("Phone number is missing!");
+        return;
+    }
+
+    let message = timeRange ? `I am on my way and should be there ${timeRange}. -LG Direct Service Technician` : '';
+
+    if (message) {
+        // Try using intent with a direct SMS link
+        window.location.href = `intent://send/${tel}#Intent;scheme=smsto;package=com.google.android.apps.messaging;S.android.intent.extra.TEXT=${encodeURIComponent(message)};end`;
+    } else {
+        window.location.href = `intent://send/${tel}#Intent;scheme=smsto;package=com.google.android.apps.messaging;end`;
+    }
+
+    // Attempt to minimize or hide the browser window
+    setTimeout(() => {
+        if (window.AndroidInterface && window.AndroidInterface.closeWindow) {
+            window.AndroidInterface.closeWindow();
+        } else {
+            window.blur();
+            window.open('', '_self', '');
+            window.close();
         }
-
-        h2 {
-            margin-bottom: 20px;
-        }
-
-        .btn {
-            display: block;
-            width: 80%;
-            max-width: 600px;
-            padding: 15px;
-            margin: 10px auto;
-            font-size: 60px;
-            font-weight: bold;
-            text-align: center;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-            touch-action: manipulation;
-        }
-
-        .btn:hover {
-            background-color: #0056b3;
-        }
-
-        @media (max-width: 700px) {
-            .btn {
-                font-size: 18px;
-                padding: 12px;
-            }
-        }
-    </style>
-    <script>
-        function sendSMS(timeRange) {
-            const urlParams = new URLSearchParams(window.location.search);
-            let tel = urlParams.get("tel");
-
-            if (!tel) {
-                alert("Phone number is missing!");
-                return;
-            }
-
-            let message = timeRange ? `I am on my way and should be there ${timeRange}. -LG Direct Service Technician` : '';
-
-            // Construct Google Messages Web URL
-            let webUri = message ? `https://messages.google.com/web/conversations/new?number=${encodeURIComponent(tel)}&text=${encodeURIComponent(message)}` : `https://messages.google.com/web/conversations/new?number=${encodeURIComponent(tel)}`;
-
-            window.location.href = webUri;
-
-            // Attempt to minimize or hide the browser window
-            setTimeout(() => {
-                if (window.AndroidInterface && window.AndroidInterface.closeWindow) {
-                    window.AndroidInterface.closeWindow();
-                } else {
-                    window.blur();
-                    window.open('', '_self', '');
-                    window.close();
-                }
-            }, 500);
-        }
-    </script>
-</head>
-<body>
-    <h2>Select Your ETA:</h2>
-    <button class="btn" onclick="sendSMS('in about 5-10 minutes')">5-10 minutes</button>
-    <button class="btn" onclick="sendSMS('in about 10-15 minutes')">10-15 minutes</button>
-    <button class="btn" onclick="sendSMS('in about 15-20 minutes')">15-20 minutes</button>
-    <button class="btn" onclick="sendSMS('in about 20-30 minutes')">20-30 minutes</button>
-    <button class="btn" onclick="sendSMS('in about 30-45 minutes')">30-45 minutes</button>
-    <button class="btn" onclick="sendSMS('in about 45-60 minutes')">45-60 minutes</button>
-    <button class="btn" onclick="sendSMS('shortly')">Shortly</button>
-    <button class="btn" onclick="sendSMS('')">Open Messenger without Text</button>
-</body>
-</html>
+    }, 500);
+}
