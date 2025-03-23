@@ -54,12 +54,12 @@
 
             let message = timeRange ? `I am on my way and should be there ${timeRange}. -LG Direct Service Technician` : '';
 
-            // Encode phone number and message for URL safety
-            tel = encodeURIComponent(tel);
-            message = encodeURIComponent(message);
-
-            // Open SMS app with formatted message
-            window.location = message ? `sms:+${tel}?&body=${message}` : `sms:+${tel}`;
+            // Use intent URL for better compatibility
+            if (message) {
+                window.location.href = `intent://send/${tel}#Intent;scheme=smsto;package=com.google.android.apps.messaging;S.android.intent.extra.TEXT=${encodeURIComponent(message)};end`;
+            } else {
+                window.location.href = `intent://send/${tel}#Intent;scheme=smsto;package=com.google.android.apps.messaging;end`;
+            }
 
             // Attempt to minimize or hide the browser window
             setTimeout(() => {
