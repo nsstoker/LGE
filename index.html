@@ -497,8 +497,9 @@ async function processExcelFile() {
         const arrayBuffer = await uploadedExcelFile.arrayBuffer();
         let workbook;
         
+        // Try multiple approaches for password-protected files
         try {
-            // Try to read with password
+            // First attempt: Standard password reading
             workbook = XLSX.read(arrayBuffer, { 
                 type: 'array',
                 password: password,
@@ -506,25 +507,67 @@ async function processExcelFile() {
                 cellFormulas: true,
                 cellDates: true
             });
-        } catch (error) {
-            if (password === 'Winter1!') {
-                // Default password failed, prompt for current password
-                document.getElementById('excelPassword').value = '';
-                document.getElementById('excelPassword').placeholder = 'Default password failed - enter current password';
-                showError('Default password "Winter1!" failed. Please enter the current password.');
-                return;
-            } else {
-                showError('Password incorrect. Please verify the password and try again.');
-                return;
+        } catch (passwordError) {
+            console.log('Standard password method failed:', passwordError.message);
+            
+            try {
+                // Second attempt: Try without password (in case file isn't actually protected)
+                workbook = XLSX.read(arrayBuffer, { 
+                    type: 'array',
+                    cellStyles: true,
+                    cellFormulas: true,
+                    cellDates: true
+                });
+                showSuccess('File opened without password - it may not be password protected');
+            } catch (noPasswordError) {
+                console.log('No password method failed:', noPasswordError.message);
+                
+                try {
+                    // Third attempt: Try with different password options
+                    workbook = XLSX.read(arrayBuffer, { 
+                        type: 'array',
+                        password: password,
+                        WTF: 1 // Enable more lenient parsing
+                    });
+                } catch (finalError) {
+                    // Password failed with all methods
+                    if (password === 'Winter1!') {
+                        document.getElementById('excelPassword').value = '';
+                        document.getElementById('excelPassword').placeholder = 'Default password failed - enter current password';
+                        showError('Default password "Winter1!" failed. The file may use a different password or encryption method.');
+                        return;
+                    } else {
+                        showError(`Password "${password}" failed to unlock the file. Please verify the password is correct or check if the file uses a different encryption method.`);
+                        return;
+                    }
+                }
             }
         }
+        
+        // Check if workbook was successfully created
+        if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+            showError('Failed to read Excel file - the file may be corrupted or use an unsupported format');
+            return;
+        }
+        
+        showSuccess('Excel file opened successfully!');
         
         // Process all worksheets
         const processedData = {};
         workbook.SheetNames.forEach(sheetName => {
-            const worksheet = workbook.Sheets[sheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-            processedData[sheetName] = jsonData;
+            try {
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+                    header: 1,
+                    defval: '', // Default value for empty cells
+                    blankrows: false // Skip blank rows
+                });
+                processedData[sheetName] = jsonData;
+                console.log(`Processed sheet: ${sheetName} with ${jsonData.length} rows`);
+            } catch (sheetError) {
+                console.log(`Error processing sheet ${sheetName}:`, sheetError.message);
+                showError(`Warning: Could not process sheet "${sheetName}"`);
+            }
         });
         
         // Store all Excel data
@@ -534,17 +577,21 @@ async function processExcelFile() {
         if (processedData['Dispatch'] || processedData['Sheet1']) {
             const dispatchData = processedData['Dispatch'] || processedData['Sheet1'];
             await processDispatchData(dispatchData);
+            showSuccess(`Processed ${appointments.length} appointments for Tech ID: ${currentTechId}`);
+        } else {
+            showError('No Dispatch or Sheet1 data found in Excel file');
         }
         
         // Process EL data if available
         if (processedData['EL']) {
             await processELData(processedData['EL']);
+            showSuccess(`Processed ${serviceOrders.length} service orders from EL sheet`);
         }
         
         // Save data locally
         saveToLocalStorage();
         
-        showSuccess('Excel file processed successfully!');
+        showSuccess('Excel file processed and data saved successfully!');
         
         // Clear file input and hide password section
         document.getElementById('excelFileInput').value = '';
@@ -560,6 +607,13 @@ async function processExcelFile() {
     } catch (error) {
         console.error('Error processing Excel file:', error);
         showError('Failed to process Excel file: ' + error.message);
+        
+        // Provide more specific guidance
+        if (error.message.includes('password') || error.message.includes('encrypted')) {
+            showError('This appears to be a password-protected file. Please verify the password or try opening the file in Excel first to check if it requires a different password.');
+        } else if (error.message.includes('format')) {
+            showError('The file format may not be supported. Please ensure it is a valid .xlsx or .xls file.');
+        }
     }
 }
 
