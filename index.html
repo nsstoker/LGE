@@ -675,7 +675,13 @@ function createLastUpdatedDiv() {
 
 function toggleDataConfig() {
     const config = document.querySelector('.data-config');
-    config.style.display = (config.style.display === 'none' || config.style.display === '') ? 'block' : 'none';
+    if (config) {
+        const isVisible = config.style.display === 'block';
+        config.style.display = isVisible ? 'none' : 'block';
+        console.log('Settings panel toggled:', config.style.display);
+    } else {
+        console.error('Settings panel not found');
+    }
 }
 
 function switchTab(tabName) {
