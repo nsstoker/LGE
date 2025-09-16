@@ -10,10 +10,6 @@
         .container{width:100vw;height:100vh;display:flex;flex-direction:column}
         
         .data-config{background:rgba(30,60,114,0.95);border-radius:8px;padding:10px;margin:5px;display:none;position:fixed;top:60px;right:10px;z-index:100;width:350px;max-height:calc(100vh - 80px);overflow-y:auto;box-shadow:0 5px 20px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1)}
-        .config-input-group{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-        .config-input{flex:1;min-width:200px;padding:8px;border:1px solid rgba(255,255,255,0.2);border-radius:6px;background:rgba(255,255,255,0.1);color:#fff;font-size:0.9em}
-        .config-input::placeholder{color:rgba(255,255,255,0.6)}
-        .config-input:focus{outline:none;border-color:#4a90e2;background:rgba(255,255,255,0.15)}
         .config-buttons{display:flex;gap:10px;flex-wrap:wrap}
         .config-btn{padding:8px 20px;border:none;border-radius:6px;font-weight:600;cursor:pointer;transition:all 0.3s ease;text-decoration:none;display:inline-flex;align-items:center;gap:8px;font-size:0.9em}
         .load-btn{background:linear-gradient(135deg,#4caf50 0%,#45a049 100%);color:white}
@@ -23,7 +19,6 @@
         .save-btn{background:linear-gradient(135deg,#ff9800 0%,#f57c00 100%);color:white}
         .connection-status{margin-top:8px;padding:8px;border-radius:8px;font-weight:500;display:flex;align-items:center;gap:8px}
         .status-connected{background:rgba(76,175,80,0.2);color:#4caf50}
-        .status-disconnected{background:rgba(244,67,54,0.2);color:#f44336}
         
         .file-upload-section{margin-bottom:15px;padding:10px;border:1px dashed rgba(255,255,255,0.3);border-radius:6px;background:rgba(255,255,255,0.05)}
         .file-input{margin-bottom:10px}
@@ -150,319 +145,11 @@
             .tech-id-input{min-width:20px;padding:8px;font-size:0.9em}
         }
     </style>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCtbuOit9J3vW1PJ0F3uYxy-QlCY3jE2UM&callback=initMap" async defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-</head>
-<body>
-<div class="container">
-    <div class="data-config">
-        <div class="file-upload-section">
-            <div class="file-input">
-                <label style="display:block;margin-bottom:5px;color:#b8d4f0;font-weight:500;">Upload Excel File (ExportExcel_Service List Info_*):</label>
-                <input type="file" id="excelFileInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
-            </div>
-            <div class="password-section" id="passwordSection">
-                <label style="display:block;margin-bottom:5px;color:#b8d4f0;font-weight:500;">Excel Password:</label>
-                <input type="password" id="excelPassword" class="password-input" placeholder="Enter Excel password">
-                <button class="config-btn upload-btn" onclick="processExcelFile()" style="margin-top:10px;">Process Excel File</button>
-            </div>
-        </div>
-        
-        <div class="data-export-section">
-            <div class="export-info">Save/Load appointment data locally:</div>
-            <div class="config-buttons">
-                <button class="config-btn save-btn" onclick="saveDataLocally()">Save Data</button>
-                <button class="config-btn load-btn" onclick="loadDataLocally()">Load Data</button>
-                <button class="config-btn export-btn" onclick="exportToExcel()">Export to Excel</button>
-                <button class="config-btn clear-btn" onclick="clearAllData()">Clear All</button>
-            </div>
-        </div>
-        
-        <div id="connectionStatus" class="connection-status status-disconnected">Local data storage active</div>
-        <div id="errorContainer"></div>
-    </div>
-
-    <div class="tab-navigation">
-        <button class="tab-btn active" onclick="switchTab('map')">Map</button>
-        <button class="tab-btn" onclick="switchTab('calendar')">Calendar</button>
-        <button class="tab-btn" onclick="openGoogleMapsRoute()">Directions</button>
-        <div class="tech-id-container">
-            <label class="tech-id-label">Tech ID:</label>
-            <input type="text" id="techIdInput" class="tech-id-input" placeholder="Enter Tech ID" onchange="onTechIdChange()">
-        </div>
-        <button class="data-toggle-btn" onclick="toggleDataConfig()">⚙️</button>
-    </div>
-
-    <div id="mapView" class="map-view">
-        <div class="map-section">
-            <div id="map"></div>
-        </div>
-        <div id="appointmentsListContainer" class="appointments-section">
-            <div id="appointmentsList" class="no-data-message">
-                <strong>Upload Excel File</strong><br>
-                Click the ⚙️ icon above, upload an Excel file, then enter a Tech ID to load appointments.
-            </div>
-        </div>
-    </div>
-  
-    <div id="calendarView" class="calendar-view">
-        <div class="calendar-header">
-            <button class="calendar-nav-btn" onclick="navigateWeek(-1)">← Previous Week</button>
-            <div class="calendar-title" id="calendarTitle">Week of September 2025</div>
-            <button class="calendar-nav-btn" onclick="navigateWeek(1)">Next Week →</button>
-        </div>
-        <div class="calendar-grid" id="calendarGrid">
-            <div style="text-align:center;padding:20px;color:#b8d4f0;">Loading calendar...</div>
-        </div>
-    </div>
-        
-<div id="appointmentModal" class="appointment-modal">
-    <div class="modal-content">
-        <button class="modal-close" onclick="closeAppointmentModal()">×</button>
-        <div class="modal-header">
-            <div class="modal-customer" id="modalCustomer">Customer Name</div>
-            <div class="modal-service" id="modalService">Service Type</div>
-            <div class="modal-field modal-field-right">
-                <span class="modal-label">Time Slot:</span>
-                <div class="modal-value" id="modalTimeSlot">-</div>
-            </div>
-        </div>
-        <div class="modal-body">
-            <div class="modal-row">
-                <div class="modal-field">
-                    <span class="modal-label">Order ID:</span>
-                    <div class="modal-value" id="modalOrderId">-</div>
-                </div>
-                <div class="modal-field">
-                    <span class="modal-label">Location:</span>
-                    <div class="modal-value" id="modalLocation">-</div>
-                </div>
-            </div>
-
-            <div class="modal-row">
-                <div class="modal-field">
-                    <span class="modal-label">Serial:</span>
-                    <div class="modal-value" id="modalSerial">-</div>
-                </div>
-                <div class="modal-field">
-                    <span class="modal-label">Model:</span>
-                    <div class="modal-value" id="modalModel">-</div>
-                </div>
-            </div>
-
-            <div class="modal-field">
-                <span class="modal-label">Notes:</span>
-                <div class="modal-value" id="modalNotes">-</div>
-            </div>
-            <div class="modal-field">
-                <span class="modal-label">LG Remarks:</span>
-                <div class="modal-value" id="modalLgRemarks">-</div>
-            </div>
-            <div class="modal-field">
-                <span class="modal-label">Symptom 1:</span>
-                <div class="modal-value" id="modalSymptom1">-</div>
-            </div>
-            <div class="modal-field">
-                <span class="modal-label">Symptom 2:</span>
-                <div class="modal-value" id="modalSymptom2">-</div>
-            </div>
-            <div class="modal-field">
-                <span class="modal-label">CiC Remark:</span>
-                <div class="modal-value" id="modalCicRemark">-</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-// Global variables
-let appointments = [], serviceOrders = [], currentWeekStart = new Date();
-let map, markers = [], infoWindows = [];
-let geocoder;
-let currentTechId = '';
-let directionsService, directionsRenderer;
-let uploadedExcelFile = null;
-let allExcelData = [];
-
-// Initialize app
-document.addEventListener('DOMContentLoaded', () => {
-    loadSavedTechId();
-    initializeCalendar();
-    loadSavedData();
-    updateConnectionStatus();
-    
-    // Set initial view state
-    document.body.classList.add('map-view-active');
-});
-
-// Data storage functions
-function saveDataLocally() {
-    try {
-        const dataToSave = {
-            appointments: appointments,
-            serviceOrders: serviceOrders,
-            allExcelData: allExcelData,
-            techId: currentTechId,
-            timestamp: new Date().toISOString()
-        };
-        
-        const dataString = JSON.stringify(dataToSave);
-        const blob = new Blob([dataString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `route_data_${currentTechId || 'backup'}_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        showSuccess('Data saved successfully!');
-    } catch (error) {
-        showError('Failed to save data: ' + error.message);
-    }
-}
-
-function loadDataLocally() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = function(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = JSON.parse(e.target.result);
-                
-                appointments = data.appointments || [];
-                serviceOrders = data.serviceOrders || [];
-                allExcelData = data.allExcelData || [];
-                
-                if (data.techId) {
-                    currentTechId = data.techId;
-                    document.getElementById('techIdInput').value = currentTechId;
-                    saveTechId(currentTechId);
-                }
-                
-                renderAppointments();
-                updateMap();
-                renderCalendar();
-                updateLastUpdatedTime();
-                
-                showSuccess('Data loaded successfully!');
-            } catch (error) {
-                showError('Failed to load data: Invalid file format');
-            }
-        };
-        reader.readAsText(file);
-    };
-    input.click();
-}
-
-function exportToExcel() {
-    if (appointments.length === 0 && serviceOrders.length === 0) {
-        showError('No data to export');
-        return;
-    }
-    
-    try {
-        const wb = XLSX.utils.book_new();
-        
-        // Export appointments
-        if (appointments.length > 0) {
-            const appointmentData = appointments.map((appt, index) => ({
-                'Order': index + 1,
-                'Customer Name': appt.customerName,
-                'Address': appt.address,
-                'Phone': appt.phone,
-                'Time Slot': appt.timeSlot,
-                'RNN': appt.rnn,
-                'Notes': appt.notes,
-                'Status': appt.status
-            }));
-            
-            const ws1 = XLSX.utils.json_to_sheet(appointmentData);
-            XLSX.utils.book_append_sheet(wb, ws1, 'Appointments');
-        }
-        
-        // Export service orders
-        if (serviceOrders.length > 0) {
-            const serviceData = serviceOrders.map(order => ({
-                'ID': order.id,
-                'Customer Name': order.customerName,
-                'Address': order.address,
-                'Service Date': order.serviceDate,
-                'Time': order.time,
-                'Service': order.service,
-                'Status': order.status,
-                'Model': order.model,
-                'Serial': order.serial
-            }));
-            
-            const ws2 = XLSX.utils.json_to_sheet(serviceData);
-            XLSX.utils.book_append_sheet(wb, ws2, 'Service Orders');
-        }
-        
-        XLSX.writeFile(wb, `route_export_${currentTechId || 'data'}_${new Date().toISOString().split('T')[0]}.xlsx`);
-        showSuccess('Data exported to Excel successfully!');
-    } catch (error) {
-        showError('Failed to export data: ' + error.message);
-    }
-}
-
-function clearAllData() {
-    if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
-        appointments = [];
-        serviceOrders = [];
-        allExcelData = [];
-        renderAppointments();
-        updateMap();
-        renderCalendar();
-        showSuccess('All data cleared');
-    }
-}
-
-function loadSavedData() {
-    // Try to load any previously saved data from localStorage
-    try {
-        const savedAppointments = localStorage.getItem('savedAppointments');
-        const savedServiceOrders = localStorage.getItem('savedServiceOrders');
-        
-        if (savedAppointments) {
-            appointments = JSON.parse(savedAppointments);
-        }
-        if (savedServiceOrders) {
-            serviceOrders = JSON.parse(savedServiceOrders);
-        }
-        
-        if (appointments.length > 0 || serviceOrders.length > 0) {
-            renderAppointments();
-            updateMap();
-            renderCalendar();
-        }
-    } catch (error) {
-        console.log('No saved data found or data corrupted');
-    }
-}
-
-function saveToLocalStorage() {
-    try {
-        localStorage.setItem('savedAppointments', JSON.stringify(appointments));
-        localStorage.setItem('savedServiceOrders', JSON.stringify(serviceOrders));
-    } catch (error) {
-        console.log('Failed to save to localStorage:', error);
-    }
-}
-
-// Excel file handling functions
+    <script src="https:// Excel file handling functions
 function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     
-    // Check if filename starts with required prefix
     if (!file.name.startsWith('ExportExcel_Service List Info_')) {
         showError('File must start with "ExportExcel_Service List Info_"');
         event.target.value = '';
@@ -471,7 +158,7 @@ function handleFileUpload(event) {
     
     uploadedExcelFile = file;
     document.getElementById('passwordSection').style.display = 'block';
-    document.getElementById('excelPassword').value = 'Winter1!'; // Pre-fill default password
+    document.getElementById('excelPassword').value = 'Winter1!';
     showSuccess(`File "${file.name}" selected. Ready to process.`);
 }
 
@@ -493,13 +180,12 @@ async function processExcelFile() {
     }
     
     try {
-        // Read and process Excel file
         const arrayBuffer = await uploadedExcelFile.arrayBuffer();
         let workbook;
+        let passwordWorked = false;
         
-        // Try multiple approaches for password-protected files
+        // Method 1: Try with password
         try {
-            // First attempt: Standard password reading
             workbook = XLSX.read(arrayBuffer, { 
                 type: 'array',
                 password: password,
@@ -507,11 +193,13 @@ async function processExcelFile() {
                 cellFormulas: true,
                 cellDates: true
             });
+            passwordWorked = true;
+            showSuccess('File opened with password successfully!');
         } catch (passwordError) {
-            console.log('Standard password method failed:', passwordError.message);
+            console.log('Password method failed:', passwordError.message);
             
+            // Method 2: Try without password (file might not be encrypted)
             try {
-                // Second attempt: Try without password (in case file isn't actually protected)
                 workbook = XLSX.read(arrayBuffer, { 
                     type: 'array',
                     cellStyles: true,
@@ -522,78 +210,101 @@ async function processExcelFile() {
             } catch (noPasswordError) {
                 console.log('No password method failed:', noPasswordError.message);
                 
+                // Method 3: Try with different options
                 try {
-                    // Third attempt: Try with different password options
                     workbook = XLSX.read(arrayBuffer, { 
                         type: 'array',
                         password: password,
-                        WTF: 1 // Enable more lenient parsing
+                        WTF: 1, // More lenient parsing
+                        cellFormula: false,
+                        cellHTML: false
                     });
+                    passwordWorked = true;
+                    showSuccess('File opened with lenient parsing');
                 } catch (finalError) {
-                    // Password failed with all methods
+                    // All methods failed
+                    console.log('All decryption methods failed:', finalError.message);
+                    
                     if (password === 'Winter1!') {
                         document.getElementById('excelPassword').value = '';
                         document.getElementById('excelPassword').placeholder = 'Default password failed - enter current password';
-                        showError('Default password "Winter1!" failed. The file may use a different password or encryption method.');
+                        showError('The file appears to use strong encryption that cannot be decrypted in the browser. Options: 1) Try a different password, 2) Open the file in Excel and save as unprotected .xlsx, or 3) Use the Python script you mentioned for decryption.');
                         return;
                     } else {
-                        showError(`Password "${password}" failed to unlock the file. Please verify the password is correct or check if the file uses a different encryption method.`);
+                        showError(`Password "${password}" failed. The file may use modern encryption that requires server-side processing. Consider: 1) Verifying the password is correct, 2) Saving the file without password protection in Excel, or 3) Using a Python script with msoffcrypto library for decryption.`);
                         return;
                     }
                 }
             }
         }
         
-        // Check if workbook was successfully created
+        // Validate workbook
         if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
-            showError('Failed to read Excel file - the file may be corrupted or use an unsupported format');
+            showError('Failed to read Excel file - the file may be corrupted, use unsupported encryption, or have an incompatible format');
             return;
         }
         
-        showSuccess('Excel file opened successfully!');
+        if (passwordWorked) {
+            showSuccess(`Excel file decrypted and opened successfully! Found ${workbook.SheetNames.length} worksheets.`);
+        }
         
-        // Process all worksheets
+        // Process worksheets
         const processedData = {};
+        let successfulSheets = 0;
+        
         workbook.SheetNames.forEach(sheetName => {
             try {
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
                     header: 1,
-                    defval: '', // Default value for empty cells
-                    blankrows: false // Skip blank rows
+                    defval: '',
+                    blankrows: false,
+                    raw: false // Convert dates and numbers to strings for consistency
                 });
-                processedData[sheetName] = jsonData;
-                console.log(`Processed sheet: ${sheetName} with ${jsonData.length} rows`);
+                
+                if (jsonData.length > 0) {
+                    processedData[sheetName] = jsonData;
+                    successfulSheets++;
+                    console.log(`Processed sheet: ${sheetName} with ${jsonData.length} rows`);
+                }
             } catch (sheetError) {
                 console.log(`Error processing sheet ${sheetName}:`, sheetError.message);
-                showError(`Warning: Could not process sheet "${sheetName}"`);
+                showError(`Warning: Could not process sheet "${sheetName}" - it may contain unsupported features`);
             }
         });
         
-        // Store all Excel data
+        if (successfulSheets === 0) {
+            showError('No data could be extracted from any worksheets. The file may be corrupted or use unsupported features.');
+            return;
+        }
+        
         allExcelData = processedData;
         
-        // Process dispatch data if available
+        // Process dispatch data
         if (processedData['Dispatch'] || processedData['Sheet1']) {
             const dispatchData = processedData['Dispatch'] || processedData['Sheet1'];
             await processDispatchData(dispatchData);
-            showSuccess(`Processed ${appointments.length} appointments for Tech ID: ${currentTechId}`);
+            
+            if (appointments.length > 0) {
+                showSuccess(`Processed ${appointments.length} appointments for Tech ID: ${currentTechId}`);
+            } else {
+                showError(`No appointments found for Tech ID: ${currentTechId}. Please verify the Tech ID is correct.`);
+            }
         } else {
-            showError('No Dispatch or Sheet1 data found in Excel file');
+            showError('No Dispatch or Sheet1 data found in Excel file. Available sheets: ' + Object.keys(processedData).join(', '));
         }
         
-        // Process EL data if available
+        // Process EL data
         if (processedData['EL']) {
             await processELData(processedData['EL']);
             showSuccess(`Processed ${serviceOrders.length} service orders from EL sheet`);
         }
         
-        // Save data locally
+        // Save and update displays
         saveToLocalStorage();
+        showSuccess(`Excel file processing complete! Successfully read ${successfulSheets} of ${workbook.SheetNames.length} worksheets.`);
         
-        showSuccess('Excel file processed and data saved successfully!');
-        
-        // Clear file input and hide password section
+        // Clean up UI
         document.getElementById('excelFileInput').value = '';
         document.getElementById('passwordSection').style.display = 'none';
         uploadedExcelFile = null;
@@ -606,13 +317,16 @@ async function processExcelFile() {
         
     } catch (error) {
         console.error('Error processing Excel file:', error);
-        showError('Failed to process Excel file: ' + error.message);
         
-        // Provide more specific guidance
-        if (error.message.includes('password') || error.message.includes('encrypted')) {
-            showError('This appears to be a password-protected file. Please verify the password or try opening the file in Excel first to check if it requires a different password.');
-        } else if (error.message.includes('format')) {
-            showError('The file format may not be supported. Please ensure it is a valid .xlsx or .xls file.');
+        // Provide specific guidance based on error type
+        if (error.message.includes('password') || error.message.includes('encrypted') || error.message.includes('decrypt')) {
+            showError('Encryption Error: This file uses encryption that cannot be handled in the browser. Solutions: 1) Open in Excel and save without password protection, 2) Use a Python script with msoffcrypto library, or 3) Try a different password.');
+        } else if (error.message.includes('format') || error.message.includes('corrupted')) {
+            showError('File Format Error: The file may be corrupted or in an unsupported format. Try re-saving the file as a standard .xlsx file.');
+        } else if (error.message.includes('memory') || error.message.includes('size')) {
+            showError('File Size Error: The file may be too large for browser processing. Try reducing the file size or use server-side processing.');
+        } else {
+            showError(`Processing Error: ${error.message}. If the file uses modern Excel encryption, consider using Python with msoffcrypto library for decryption.`);
         }
     }
 }
@@ -644,14 +358,12 @@ async function processDispatchData(dispatchValues) {
         }
     }
     
-    // Sort by sort key
     filteredData.sort((a, b) => {
         const aNum = parseInt(a.sortKey) || 0;
         const bNum = parseInt(b.sortKey) || 0;
         return aNum - bNum;
     });
     
-    // Convert to appointments format
     appointments = filteredData.map((item, index) => ({
         id: `appt_${index}`,
         customerName: item.customerName,
@@ -663,7 +375,6 @@ async function processDispatchData(dispatchValues) {
         status: 'pending'
     }));
     
-    // Try to populate notes from EL data if available
     if (allExcelData['EL']) {
         populateNotesFromEL(appointments);
     }
@@ -730,7 +441,6 @@ function onTechIdChange() {
     currentTechId = techId;
     saveTechId(techId);
     
-    // Reprocess data if we have Excel data loaded
     if (allExcelData && Object.keys(allExcelData).length > 0) {
         if (allExcelData['Dispatch'] || allExcelData['Sheet1']) {
             const dispatchData = allExcelData['Dispatch'] || allExcelData['Sheet1'];
@@ -769,7 +479,6 @@ function initMap() {
 function updateMap() {
     if (!map || appointments.length === 0) return;
 
-    // Clear existing markers and info windows
     markers.forEach(marker => marker.setMap(null));
     markers = [];
     infoWindows = [];
@@ -779,7 +488,6 @@ function updateMap() {
     appointments.forEach((a, index) => {
         if (!a.address) return;
         
-        // Geocode using only the address, not the customer name
         geocoder.geocode({ 'address': a.address }, (results, status) => {
             if (status === 'OK') {
                 const marker = new google.maps.Marker({
@@ -810,7 +518,6 @@ function updateMap() {
                 infoWindows.push(infoWindow);
                 bounds.extend(marker.getPosition());
                 
-                // If all markers are placed, draw the route
                 if (markers.length === appointments.filter(a => a.address).length) {
                     map.fitBounds(bounds);
                     drawRoute();
@@ -1182,18 +889,12 @@ function reorderAppointment(fromIndex, direction) {
     const toIndex = fromIndex + direction;
     if (toIndex < 0 || toIndex >= appointments.length) return;
     
-    // Swap appointments
     const temp = appointments[fromIndex];
     appointments[fromIndex] = appointments[toIndex];
     appointments[toIndex] = temp;
     
-    // Re-render the appointments list
     renderAppointments();
-    
-    // Update the map with new order
     updateMap();
-    
-    // Save changes
     saveToLocalStorage();
     
     showSuccess(`Moved ${temp.customerName} ${direction > 0 ? 'down' : 'up'} in route order`);
@@ -1206,11 +907,8 @@ function updateAppointmentStatus(id, status) {
         appointment.status = status;
         
         if (status === 'completed') {
-            // Remove the completed appointment from the array
             appointments.splice(appointmentIndex, 1);
             showSuccess(`Appointment for ${appointment.customerName} marked as completed and removed from route`);
-            
-            // Re-render appointments and update map
             renderAppointments();
             updateMap();
         } else {
@@ -1218,10 +916,310 @@ function updateAppointmentStatus(id, status) {
             renderAppointments();
         }
         
-        // Save changes
         saveToLocalStorage();
     }
 }
 </script>
 </body>
-</html>
+</html>maps.googleapis.com/maps/api/js?key=AIzaSyCtbuOit9J3vW1PJ0F3uYxy-QlCY3jE2UM&callback=initMap" async defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="data-config">
+        <div class="file-upload-section">
+            <div class="file-input">
+                <label style="display:block;margin-bottom:5px;color:#b8d4f0;font-weight:500;">Upload Excel File (ExportExcel_Service List Info_*):</label>
+                <input type="file" id="excelFileInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+            </div>
+            <div class="password-section" id="passwordSection">
+                <label style="display:block;margin-bottom:5px;color:#b8d4f0;font-weight:500;">Excel Password:</label>
+                <input type="password" id="excelPassword" class="password-input" placeholder="Enter Excel password">
+                <button class="config-btn upload-btn" onclick="processExcelFile()" style="margin-top:10px;">Process Excel File</button>
+            </div>
+        </div>
+        
+        <div class="data-export-section">
+            <div class="export-info">Save/Load appointment data locally:</div>
+            <div class="config-buttons">
+                <button class="config-btn save-btn" onclick="saveDataLocally()">Save Data</button>
+                <button class="config-btn load-btn" onclick="loadDataLocally()">Load Data</button>
+                <button class="config-btn export-btn" onclick="exportToExcel()">Export to Excel</button>
+                <button class="config-btn clear-btn" onclick="clearAllData()">Clear All</button>
+            </div>
+        </div>
+        
+        <div id="connectionStatus" class="connection-status status-connected">Local data storage active</div>
+        <div id="errorContainer"></div>
+    </div>
+
+    <div class="tab-navigation">
+        <button class="tab-btn active" onclick="switchTab('map')">Map</button>
+        <button class="tab-btn" onclick="switchTab('calendar')">Calendar</button>
+        <button class="tab-btn" onclick="openGoogleMapsRoute()">Directions</button>
+        <div class="tech-id-container">
+            <label class="tech-id-label">Tech ID:</label>
+            <input type="text" id="techIdInput" class="tech-id-input" placeholder="Enter Tech ID" onchange="onTechIdChange()">
+        </div>
+        <button class="data-toggle-btn" onclick="toggleDataConfig()">⚙️</button>
+    </div>
+
+    <div id="mapView" class="map-view">
+        <div class="map-section">
+            <div id="map"></div>
+        </div>
+        <div id="appointmentsListContainer" class="appointments-section">
+            <div id="appointmentsList" class="no-data-message">
+                <strong>Upload Excel File</strong><br>
+                Click the ⚙️ icon above, upload an Excel file, then enter a Tech ID to load appointments.
+            </div>
+        </div>
+    </div>
+  
+    <div id="calendarView" class="calendar-view">
+        <div class="calendar-header">
+            <button class="calendar-nav-btn" onclick="navigateWeek(-1)">← Previous Week</button>
+            <div class="calendar-title" id="calendarTitle">Week of September 2025</div>
+            <button class="calendar-nav-btn" onclick="navigateWeek(1)">Next Week →</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid">
+            <div style="text-align:center;padding:20px;color:#b8d4f0;">Loading calendar...</div>
+        </div>
+    </div>
+        
+<div id="appointmentModal" class="appointment-modal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeAppointmentModal()">×</button>
+        <div class="modal-header">
+            <div class="modal-customer" id="modalCustomer">Customer Name</div>
+            <div class="modal-service" id="modalService">Service Type</div>
+            <div class="modal-field modal-field-right">
+                <span class="modal-label">Time Slot:</span>
+                <div class="modal-value" id="modalTimeSlot">-</div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="modal-row">
+                <div class="modal-field">
+                    <span class="modal-label">Order ID:</span>
+                    <div class="modal-value" id="modalOrderId">-</div>
+                </div>
+                <div class="modal-field">
+                    <span class="modal-label">Location:</span>
+                    <div class="modal-value" id="modalLocation">-</div>
+                </div>
+            </div>
+
+            <div class="modal-row">
+                <div class="modal-field">
+                    <span class="modal-label">Serial:</span>
+                    <div class="modal-value" id="modalSerial">-</div>
+                </div>
+                <div class="modal-field">
+                    <span class="modal-label">Model:</span>
+                    <div class="modal-value" id="modalModel">-</div>
+                </div>
+            </div>
+
+            <div class="modal-field">
+                <span class="modal-label">Notes:</span>
+                <div class="modal-value" id="modalNotes">-</div>
+            </div>
+            <div class="modal-field">
+                <span class="modal-label">LG Remarks:</span>
+                <div class="modal-value" id="modalLgRemarks">-</div>
+            </div>
+            <div class="modal-field">
+                <span class="modal-label">Symptom 1:</span>
+                <div class="modal-value" id="modalSymptom1">-</div>
+            </div>
+            <div class="modal-field">
+                <span class="modal-label">Symptom 2:</span>
+                <div class="modal-value" id="modalSymptom2">-</div>
+            </div>
+            <div class="modal-field">
+                <span class="modal-label">CiC Remark:</span>
+                <div class="modal-value" id="modalCicRemark">-</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables
+let appointments = [], serviceOrders = [], currentWeekStart = new Date();
+let map, markers = [], infoWindows = [];
+let geocoder, directionsService, directionsRenderer;
+let currentTechId = '';
+let uploadedExcelFile = null;
+let allExcelData = [];
+
+// Initialize app
+document.addEventListener('DOMContentLoaded', () => {
+    loadSavedTechId();
+    initializeCalendar();
+    loadSavedData();
+    updateConnectionStatus();
+    document.body.classList.add('map-view-active');
+});
+
+// Data storage functions
+function saveDataLocally() {
+    try {
+        const dataToSave = {
+            appointments: appointments,
+            serviceOrders: serviceOrders,
+            allExcelData: allExcelData,
+            techId: currentTechId,
+            timestamp: new Date().toISOString()
+        };
+        
+        const dataString = JSON.stringify(dataToSave);
+        const blob = new Blob([dataString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `route_data_${currentTechId || 'backup'}_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showSuccess('Data saved successfully!');
+    } catch (error) {
+        showError('Failed to save data: ' + error.message);
+    }
+}
+
+function loadDataLocally() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                
+                appointments = data.appointments || [];
+                serviceOrders = data.serviceOrders || [];
+                allExcelData = data.allExcelData || [];
+                
+                if (data.techId) {
+                    currentTechId = data.techId;
+                    document.getElementById('techIdInput').value = currentTechId;
+                    saveTechId(currentTechId);
+                }
+                
+                renderAppointments();
+                updateMap();
+                renderCalendar();
+                updateLastUpdatedTime();
+                
+                showSuccess('Data loaded successfully!');
+            } catch (error) {
+                showError('Failed to load data: Invalid file format');
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+function exportToExcel() {
+    if (appointments.length === 0 && serviceOrders.length === 0) {
+        showError('No data to export');
+        return;
+    }
+    
+    try {
+        const wb = XLSX.utils.book_new();
+        
+        if (appointments.length > 0) {
+            const appointmentData = appointments.map((appt, index) => ({
+                'Order': index + 1,
+                'Customer Name': appt.customerName,
+                'Address': appt.address,
+                'Phone': appt.phone,
+                'Time Slot': appt.timeSlot,
+                'RNN': appt.rnn,
+                'Notes': appt.notes,
+                'Status': appt.status
+            }));
+            
+            const ws1 = XLSX.utils.json_to_sheet(appointmentData);
+            XLSX.utils.book_append_sheet(wb, ws1, 'Appointments');
+        }
+        
+        if (serviceOrders.length > 0) {
+            const serviceData = serviceOrders.map(order => ({
+                'ID': order.id,
+                'Customer Name': order.customerName,
+                'Address': order.address,
+                'Service Date': order.serviceDate,
+                'Time': order.time,
+                'Service': order.service,
+                'Status': order.status,
+                'Model': order.model,
+                'Serial': order.serial
+            }));
+            
+            const ws2 = XLSX.utils.json_to_sheet(serviceData);
+            XLSX.utils.book_append_sheet(wb, ws2, 'Service Orders');
+        }
+        
+        XLSX.writeFile(wb, `route_export_${currentTechId || 'data'}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        showSuccess('Data exported to Excel successfully!');
+    } catch (error) {
+        showError('Failed to export data: ' + error.message);
+    }
+}
+
+function clearAllData() {
+    if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+        appointments = [];
+        serviceOrders = [];
+        allExcelData = [];
+        renderAppointments();
+        updateMap();
+        renderCalendar();
+        showSuccess('All data cleared');
+    }
+}
+
+function loadSavedData() {
+    try {
+        const savedAppointments = localStorage.getItem('savedAppointments');
+        const savedServiceOrders = localStorage.getItem('savedServiceOrders');
+        
+        if (savedAppointments) {
+            appointments = JSON.parse(savedAppointments);
+        }
+        if (savedServiceOrders) {
+            serviceOrders = JSON.parse(savedServiceOrders);
+        }
+        
+        if (appointments.length > 0 || serviceOrders.length > 0) {
+            renderAppointments();
+            updateMap();
+            renderCalendar();
+        }
+    } catch (error) {
+        console.log('No saved data found');
+    }
+}
+
+function saveToLocalStorage() {
+    try {
+        localStorage.setItem('savedAppointments', JSON.stringify(appointments));
+        localStorage.setItem('savedServiceOrders', JSON.stringify(serviceOrders));
+    } catch (error) {
+        console.log('Failed to save to localStorage:', error);
+    }
+}
+
+//
