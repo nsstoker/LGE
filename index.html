@@ -150,8 +150,17 @@ function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     
-    if (!file.name.startsWith('ExportExcel_Service List Info_')) {
-        showError('File must start with "ExportExcel_Service List Info_"');
+    const fileType = document.getElementById('fileTypeSelect').value;
+    
+    // Validate filename based on type
+    if (fileType === 'service' && !file.name.startsWith('ExportExcel_Service List Info_')) {
+        showError('Service file must start with "ExportExcel_Service List Info_"');
+        event.target.value = '';
+        return;
+    }
+    
+    if (fileType === 'dispatch' && !file.name.startsWith('ALL DISPATCHES')) {
+        showError('Dispatch file must start with "ALL DISPATCHES"');
         event.target.value = '';
         return;
     }
@@ -251,6 +260,7 @@ async function processExcelFile() {
         // Process worksheets
         const processedData = {};
         let successfulSheets = 0;
+        const fileType = document.getElementById('fileTypeSelect').value;
         
         workbook.SheetNames.forEach(sheetName => {
             try {
@@ -278,26 +288,41 @@ async function processExcelFile() {
             return;
         }
         
-        allExcelData = processedData;
-        
-        // Process dispatch data
-        if (processedData['Dispatch'] || processedData['Sheet1']) {
-            const dispatchData = processedData['Dispatch'] || processedData['Sheet1'];
-            await processDispatchData(dispatchData);
-            
-            if (appointments.length > 0) {
-                showSuccess(`Processed ${appointments.length} appointments for Tech ID: ${currentTechId}`);
+        // Handle different file types
+        if (fileType === 'dispatch') {
+            // For ALL DISPATCHES files, look for "ALL DISPATCHES" sheet to replace dispatch data
+            if (processedData['ALL DISPATCHES']) {
+                // Replace the existing dispatch data with ALL DISPATCHES sheet
+                allExcelData['Dispatch'] = processedData['ALL DISPATCHES'];
+                await processDispatchData(processedData['ALL DISPATCHES']);
+                showSuccess(`Replaced dispatch data with ALL DISPATCHES sheet containing ${processedData['ALL DISPATCHES'].length} rows`);
             } else {
-                showError(`No appointments found for Tech ID: ${currentTechId}. Please verify the Tech ID is correct.`);
+                showError('No "ALL DISPATCHES" sheet found in the uploaded file. Available sheets: ' + Object.keys(processedData).join(', '));
+                return;
             }
         } else {
-            showError('No Dispatch or Sheet1 data found in Excel file. Available sheets: ' + Object.keys(processedData).join(', '));
-        }
-        
-        // Process EL data
-        if (processedData['EL']) {
-            await processELData(processedData['EL']);
-            showSuccess(`Processed ${serviceOrders.length} service orders from EL sheet`);
+            // For service files, process normally
+            allExcelData = processedData;
+            
+            // Process dispatch data
+            if (processedData['Dispatch'] || processedData['Sheet1']) {
+                const dispatchData = processedData['Dispatch'] || processedData['Sheet1'];
+                await processDispatchData(dispatchData);
+                
+                if (appointments.length > 0) {
+                    showSuccess(`Processed ${appointments.length} appointments for Tech ID: ${currentTechId}`);
+                } else {
+                    showError(`No appointments found for Tech ID: ${currentTechId}. Please verify the Tech ID is correct.`);
+                }
+            } else {
+                showError('No Dispatch or Sheet1 data found in Excel file. Available sheets: ' + Object.keys(processedData).join(', '));
+            }
+            
+            // Process EL data
+            if (processedData['EL']) {
+                await processELData(processedData['EL']);
+                showSuccess(`Processed ${serviceOrders.length} service orders from EL sheet`);
+            }
         }
         
         // Save and update displays
@@ -929,7 +954,11 @@ function updateAppointmentStatus(id, status) {
     <div class="data-config">
         <div class="file-upload-section">
             <div class="file-input">
-                <label style="display:block;margin-bottom:5px;color:#b8d4f0;font-weight:500;">Upload Excel File (ExportExcel_Service List Info_*):</label>
+                <label style="display:block;margin-bottom:5px;color:#b8d4f0;font-weight:500;">Upload Excel File:</label>
+                <select id="fileTypeSelect" style="width:100%;padding:8px;margin-bottom:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
+                    <option value="service">Service List Info (ExportExcel_Service List Info_*)</option>
+                    <option value="dispatch">All Dispatches (ALL DISPATCHES*)</option>
+                </select>
                 <input type="file" id="excelFileInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
             </div>
             <div class="password-section" id="passwordSection">
@@ -940,12 +969,9 @@ function updateAppointmentStatus(id, status) {
         </div>
         
         <div class="data-export-section">
-            <div class="export-info">Save/Load appointment data locally:</div>
+            <div class="export-info">Daily data management:</div>
             <div class="config-buttons">
-                <button class="config-btn save-btn" onclick="saveDataLocally()">Save Data</button>
-                <button class="config-btn load-btn" onclick="loadDataLocally()">Load Data</button>
-                <button class="config-btn export-btn" onclick="exportToExcel()">Export to Excel</button>
-                <button class="config-btn clear-btn" onclick="clearAllData()">Clear All</button>
+                <button class="config-btn clear-btn" onclick="clearAllData()">Clear All Data</button>
             </div>
         </div>
         
@@ -1063,131 +1089,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('map-view-active');
 });
 
-// Data storage functions
-function saveDataLocally() {
-    try {
-        const dataToSave = {
-            appointments: appointments,
-            serviceOrders: serviceOrders,
-            allExcelData: allExcelData,
-            techId: currentTechId,
-            timestamp: new Date().toISOString()
-        };
-        
-        const dataString = JSON.stringify(dataToSave);
-        const blob = new Blob([dataString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `route_data_${currentTechId || 'backup'}_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        showSuccess('Data saved successfully!');
-    } catch (error) {
-        showError('Failed to save data: ' + error.message);
-    }
-}
-
-function loadDataLocally() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = function(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = JSON.parse(e.target.result);
-                
-                appointments = data.appointments || [];
-                serviceOrders = data.serviceOrders || [];
-                allExcelData = data.allExcelData || [];
-                
-                if (data.techId) {
-                    currentTechId = data.techId;
-                    document.getElementById('techIdInput').value = currentTechId;
-                    saveTechId(currentTechId);
-                }
-                
-                renderAppointments();
-                updateMap();
-                renderCalendar();
-                updateLastUpdatedTime();
-                
-                showSuccess('Data loaded successfully!');
-            } catch (error) {
-                showError('Failed to load data: Invalid file format');
-            }
-        };
-        reader.readAsText(file);
-    };
-    input.click();
-}
-
-function exportToExcel() {
-    if (appointments.length === 0 && serviceOrders.length === 0) {
-        showError('No data to export');
-        return;
-    }
-    
-    try {
-        const wb = XLSX.utils.book_new();
-        
-        if (appointments.length > 0) {
-            const appointmentData = appointments.map((appt, index) => ({
-                'Order': index + 1,
-                'Customer Name': appt.customerName,
-                'Address': appt.address,
-                'Phone': appt.phone,
-                'Time Slot': appt.timeSlot,
-                'RNN': appt.rnn,
-                'Notes': appt.notes,
-                'Status': appt.status
-            }));
-            
-            const ws1 = XLSX.utils.json_to_sheet(appointmentData);
-            XLSX.utils.book_append_sheet(wb, ws1, 'Appointments');
-        }
-        
-        if (serviceOrders.length > 0) {
-            const serviceData = serviceOrders.map(order => ({
-                'ID': order.id,
-                'Customer Name': order.customerName,
-                'Address': order.address,
-                'Service Date': order.serviceDate,
-                'Time': order.time,
-                'Service': order.service,
-                'Status': order.status,
-                'Model': order.model,
-                'Serial': order.serial
-            }));
-            
-            const ws2 = XLSX.utils.json_to_sheet(serviceData);
-            XLSX.utils.book_append_sheet(wb, ws2, 'Service Orders');
-        }
-        
-        XLSX.writeFile(wb, `route_export_${currentTechId || 'data'}_${new Date().toISOString().split('T')[0]}.xlsx`);
-        showSuccess('Data exported to Excel successfully!');
-    } catch (error) {
-        showError('Failed to export data: ' + error.message);
-    }
-}
-
+// Data storage functions - simplified for daily workflow
 function clearAllData() {
     if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
         appointments = [];
         serviceOrders = [];
         allExcelData = [];
+        
+        // Clear localStorage as well
+        localStorage.removeItem('savedAppointments');
+        localStorage.removeItem('savedServiceOrders');
+        
         renderAppointments();
         updateMap();
         renderCalendar();
-        showSuccess('All data cleared');
+        showSuccess('All data cleared - ready for new daily data');
     }
 }
 
